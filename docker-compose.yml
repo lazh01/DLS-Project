@@ -72,7 +72,7 @@ services:
       - serviceName: articles-south-america-db
       - serviceName: articles-oceania-db
       - serviceName: articles-global-db
-    replicas: 2
+    replicas: 3
 volumes:
   mssql-africa-aricles:
   mssql-asia-articles:
