@@ -5,7 +5,7 @@ services:
       MSSQL_SA_PASSWORD: "SuperSecret7!"
       ACCEPT_EULA: "Y"
     volumes:
-      - mssql-africa-aricles:/var/opt/mssql
+      - mssql-africa-articles:/var/opt/mssql
   articles-asia-db:
     image: mcr.microsoft.com/azure-sql-edge:latest
     environment:
@@ -48,33 +48,35 @@ services:
       ACCEPT_EULA: "Y"
     volumes:
       - mssql-oceania-articles:/var/opt/mssql
-    articles-global-db:
-      image: mcr.microsoft.com/azure-sql-edge:latest
-      environment:
-        MSSQL_SA_PASSWORD: "SuperSecret7!"
-        ACCEPT_EULA: "Y"
-      volumes:
-        - mssql-global-articles:/var/opt/mssql
+  articles-global-db:
+    image: mcr.microsoft.com/azure-sql-edge:latest
+    environment:
+      MSSQL_SA_PASSWORD: "SuperSecret7!"
+      ACCEPT_EULA: "Y"
+    volumes:
+      - mssql-global-articles:/var/opt/mssql
   articleservice:
     build:
-      context: .
-      dockerfile: ArticleService/dockerfile
+      context: ./ArticleService
+      dockerfile: dockerfile
     ports:
-      - "8080:80"
+      - "8023-8025:80"
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_URLS=http://0.0.0.0:80
     depends_on:
-      - serviceName: articles-africa-db
-      - serviceName: articles-asia-db
-      - serviceName: articles-antarctica-db
-      - serviceName: articles-europe-db
-      - serviceName: articles-north-america-db
-      - serviceName: articles-south-america-db
-      - serviceName: articles-oceania-db
-      - serviceName: articles-global-db
-    replicas: 3
+      - "articles-africa-db"
+      - "articles-asia-db"
+      - "articles-antarctica-db"
+      - "articles-europe-db"
+      - "articles-north-america-db"
+      - "articles-south-america-db"
+      - "articles-oceania-db"
+      - "articles-global-db"
+    deploy:
+      replicas: 3
 volumes:
-  mssql-africa-aricles:
+  mssql-africa-articles:
   mssql-asia-articles:
   mssql-antarctica-articles:
   mssql-europe-articles:
