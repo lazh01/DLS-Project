@@ -60,7 +60,7 @@ services:
       context: ./ArticleService
       dockerfile: dockerfile
     ports:
-      - "8023-8025:80"
+      - "8023:80"
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
       - ASPNETCORE_URLS=http://0.0.0.0:80
