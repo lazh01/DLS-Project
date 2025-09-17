@@ -1,5 +1,6 @@
 using System.Data;
 using System.Data.Common;
+using System.Threading.Tasks;
 using Microsoft.Data.SqlClient;
 
 namespace ArticleService;
@@ -17,35 +18,35 @@ public class Coordinator
     private const string GLOBAL_DB = "articles-global-db";
 
 
-    public DbConnection GetConnectionByRegion(string region)
+    public async Task<DbConnection> GetConnectionByRegion(string region)
     {
         return region.ToLower() switch
         {
-            "africa" => GetConnectionByServerName(AFRICA_DB),
-            "asia" => GetConnectionByServerName(ASIA_DB),
-            "antarctica" => GetConnectionByServerName(ANTARCTICA_DB),
-            "europe" => GetConnectionByServerName(EUROPE_DB),
-            "north america" => GetConnectionByServerName(NORTH_AMERICA_DB),
-            "south america" => GetConnectionByServerName(SOUTH_AMERICA_DB),
-            "oceania" => GetConnectionByServerName(OCEANIA_DB),
-            "global" => GetConnectionByServerName(GLOBAL_DB),
+            "africa" => await GetConnectionByServerName(AFRICA_DB),
+            "asia" => await GetConnectionByServerName(ASIA_DB),
+            "antarctica" => await GetConnectionByServerName(ANTARCTICA_DB),
+            "europe" => await GetConnectionByServerName(EUROPE_DB),
+            "north america" => await GetConnectionByServerName(NORTH_AMERICA_DB),
+            "south america" => await GetConnectionByServerName(SOUTH_AMERICA_DB),
+            "oceania" => await GetConnectionByServerName(OCEANIA_DB),
+            "global" => await GetConnectionByServerName(GLOBAL_DB),
             _ => throw new ArgumentException($"Unknown region: {region}")
         };
     }
 
-        public IEnumerable<DbConnection> GetAllConnections()
+        public async IAsyncEnumerable<DbConnection> GetAllConnections()
         {
-            yield return GetConnectionByServerName(AFRICA_DB);
-            yield return GetConnectionByServerName(ASIA_DB);
-            yield return GetConnectionByServerName(ANTARCTICA_DB);
-            yield return GetConnectionByServerName(EUROPE_DB);
-            yield return GetConnectionByServerName(NORTH_AMERICA_DB);
-            yield return GetConnectionByServerName(SOUTH_AMERICA_DB);
-            yield return GetConnectionByServerName(OCEANIA_DB);
-            yield return GetConnectionByServerName(GLOBAL_DB);
+            yield return await GetConnectionByServerName(AFRICA_DB);
+            yield return await GetConnectionByServerName(ASIA_DB);
+            yield return await GetConnectionByServerName(ANTARCTICA_DB);
+            yield return await GetConnectionByServerName(EUROPE_DB);
+            yield return await GetConnectionByServerName(NORTH_AMERICA_DB);
+            yield return await GetConnectionByServerName(SOUTH_AMERICA_DB);
+            yield return await GetConnectionByServerName(OCEANIA_DB);
+            yield return await GetConnectionByServerName(GLOBAL_DB);
         }
 
-    private DbConnection GetConnectionByServerName(string serverName)
+    private async Task<DbConnection> GetConnectionByServerName(string serverName)
     {
         if (ConnectionCache.TryGetValue(serverName, out var connection))
         {
@@ -53,7 +54,7 @@ public class Coordinator
         }
 
         connection = new SqlConnection($"Server={serverName};User Id=sa;Password=SuperSecret7!;Encrypt=false;");
-        connection.Open();
+        await connection.OpenAsync();
         ConnectionCache.Add(serverName, connection);
         return connection;
     }
