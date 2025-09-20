@@ -1,0 +1,86 @@
+services:
+  articles-africa-db:
+    image: mcr.microsoft.com/azure-sql-edge:latest
+    environment:
+      MSSQL_SA_PASSWORD: "SuperSecret7!"
+      ACCEPT_EULA: "Y"
+    volumes:
+      - mssql-africa-articles:/var/opt/mssql
+  articles-asia-db:
+    image: mcr.microsoft.com/azure-sql-edge:latest
+    environment:
+      MSSQL_SA_PASSWORD: "SuperSecret7!"
+      ACCEPT_EULA: "Y"
+    volumes:
+      - mssql-asia-articles:/var/opt/mssql
+  articles-antarctica-db:
+    image: mcr.microsoft.com/azure-sql-edge:latest
+    environment:
+      MSSQL_SA_PASSWORD: "SuperSecret7!"
+      ACCEPT_EULA: "Y"
+    volumes:
+      - mssql-antarctica-articles:/var/opt/mssql
+  articles-europe-db:
+    image: mcr.microsoft.com/azure-sql-edge:latest
+    environment:
+      MSSQL_SA_PASSWORD: "SuperSecret7!"
+      ACCEPT_EULA: "Y"
+    volumes:
+      - mssql-europe-articles:/var/opt/mssql
+  articles-north-america-db:
+    image: mcr.microsoft.com/azure-sql-edge:latest
+    environment:
+      MSSQL_SA_PASSWORD: "SuperSecret7!"
+      ACCEPT_EULA: "Y"
+    volumes:
+      - mssql-north-america-articles:/var/opt/mssql
+  articles-south-america-db:
+    image: mcr.microsoft.com/azure-sql-edge:latest
+    environment:
+      MSSQL_SA_PASSWORD: "SuperSecret7!"
+      ACCEPT_EULA: "Y"
+    volumes:
+      - mssql-south-america-articles:/var/opt/mssql
+  articles-oceania-db:
+    image: mcr.microsoft.com/azure-sql-edge:latest
+    environment:
+      MSSQL_SA_PASSWORD: "SuperSecret7!"
+      ACCEPT_EULA: "Y"
+    volumes:
+      - mssql-oceania-articles:/var/opt/mssql
+  articles-global-db:
+    image: mcr.microsoft.com/azure-sql-edge:latest
+    environment:
+      MSSQL_SA_PASSWORD: "SuperSecret7!"
+      ACCEPT_EULA: "Y"
+    volumes:
+      - mssql-global-articles:/var/opt/mssql
+  articleservice:
+    build:
+      context: ./ArticleService
+      dockerfile: dockerfile
+    ports:
+      - "8023:80"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_URLS=http://0.0.0.0:80
+    depends_on:
+      - "articles-africa-db"
+      - "articles-asia-db"
+      - "articles-antarctica-db"
+      - "articles-europe-db"
+      - "articles-north-america-db"
+      - "articles-south-america-db"
+      - "articles-oceania-db"
+      - "articles-global-db"
+    deploy:
+      replicas: 3
+volumes:
+  mssql-africa-articles:
+  mssql-asia-articles:
+  mssql-antarctica-articles:
+  mssql-europe-articles:
+  mssql-north-america-articles:
+  mssql-south-america-articles:
+  mssql-oceania-articles:
+  mssql-global-articles:

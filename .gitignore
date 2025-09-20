@@ -126,3 +126,5 @@ fabric.properties
 
 *.sln
 /ProfanityService/Profanities/words.json
+.vs
+
