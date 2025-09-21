@@ -1,0 +1,13 @@
+@CommentService_HostAddress = http://localhost:6002
+
+GET {{CommentService_HostAddress}}/Weatherforecast/
+Accept: application/json
+
+###
+
+
+GET {{CommentService_HostAddress}}/api/Comment
+
+###
+
+POST {{CommentService_HostAddress}}/api/Comment
