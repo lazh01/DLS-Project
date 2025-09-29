@@ -18,6 +18,18 @@ services:
           ACCEPT_EULA: "Y"
         volumes:
           - mssql-drafts:/var/opt/mssql
+  seq:
+    image: datalust/seq
+    ports:
+      - "5341:5341"
+      - "5342:80"
+    environment:
+      SEQ_FIRSTRUN_ADMINPASSWORD: "password"
+      ACCEPT_EULA: "Y"
+    volumes:
+      - rps_seq_data:/data
+
 volumes:
     mssql-drafts:
+    rps_seq_data:
       

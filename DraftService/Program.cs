@@ -1,4 +1,5 @@
 using DraftService.Data;
+using DraftService.Services;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 
@@ -19,7 +20,7 @@ builder.Services.AddDbContext<DraftServiceContext>(options =>
 });
 
 // Add services to the container.
-
+builder.Services.AddScoped<DraftModelService>();
 builder.Services.AddControllers();
 builder.Services.AddControllersWithViews();
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
