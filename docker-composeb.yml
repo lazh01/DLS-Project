@@ -1,0 +1,39 @@
+services:
+    commentservice:
+      build:
+        context: ./CommentService
+      ports:
+        - "6002:80"
+      environment:
+        - ASPNETCORE_ENVIRONMENT=Development
+        - ASPNETCORE_URLS=http://0.0.0.0:80
+      depends_on:
+        - comment-db
+    comment-db:
+        image: mcr.microsoft.com/azure-sql-edge:latest
+        environment:
+          MSSQL_SA_PASSWORD: "SuperSecret7!"
+          ACCEPT_EULA: "Y"
+        volumes:
+          - mssql-comments:/var/opt/mssql
+    profanityservice:
+      build:
+        context: ./ProfanityService
+      ports:
+        - "6001:80"
+      environment:
+        - ASPNETCORE_ENVIRONMENT=Development
+        - ASPNETCORE_URLS=http://0.0.0.0:80
+      depends_on:
+        - profanity-db
+    profanity-db:
+        image: mcr.microsoft.com/azure-sql-edge:latest
+        environment:
+          MSSQL_SA_PASSWORD: "SuperSecret7!"
+          ACCEPT_EULA: "Y"
+        volumes:
+          - mssql-profanities:/var/opt/mssql
+
+volumes:
+  mssql-profanities:
+  mssql-comments:  
