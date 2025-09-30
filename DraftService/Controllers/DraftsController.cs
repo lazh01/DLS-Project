@@ -3,6 +3,7 @@ using DraftService.Services;
 using DraftService.SharedModels;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Monitoring;
 
 namespace DraftService.Controllers
 {
@@ -34,8 +35,11 @@ namespace DraftService.Controllers
         [HttpPost]
         public async Task<IActionResult> CreateDraft(CreateDraftRequest request)
         {
-            var draft = await _service.CreateDraftAsync(request);
-            return CreatedAtAction(nameof(GetDraftById), new { id = draft.Id }, draft);
+            using (var activity = MonitorService.ActivitySource.StartActivity())
+            {
+                var draft = await _service.CreateDraftAsync(request);
+                return CreatedAtAction(nameof(GetDraftById), new { id = draft.Id }, draft);
+            }
         }
         [HttpPut("{id}")]
         public async Task<IActionResult> UpdateDraft(int id, UpdateDraftRequest request)

@@ -9,6 +9,8 @@ services:
       - ASPNETCORE_ENVIRONMENT=Development
       - ASPNETCORE_URLS=http://0.0.0.0:80
       - ConnectionStrings__DraftDatabase=Server=draft-db;Database=Drafts;User Id=sa;Password=SuperSecret7!;Encrypt=false;
+      - SEQ_URL=http://seq:5341
+      - ZIPKIN_URL=http://zipkin:9411/api/v2/spans
     depends_on:
       - draft-db
   draft-db:
@@ -28,8 +30,28 @@ services:
       ACCEPT_EULA: "Y"
     volumes:
       - rps_seq_data:/data
+  zipkin:
+    image: openzipkin/zipkin:3.4.1
+    ports:
+      - "9411:9411"
+    environment:
+      - STORAGE_TYPE=mysql
+      - MYSQL_HOST=zipkin-storage
+      - MYSQL_USER=zipkin
+      - MYSQL_PASS=zipkin
+      - MYSQL_DB=zipkin
+    depends_on:
+      - zipkin-storage
+  zipkin-storage:
+    image: openzipkin/zipkin-mysql
+    ports:
+      - "3306:3306"
+    volumes:
+      - zipkin_data:/mysql/data
+     
 
 volumes:
     mssql-drafts:
     rps_seq_data:
+    zipkin_data:
       
