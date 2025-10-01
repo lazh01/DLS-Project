@@ -1,57 +1,39 @@
 services:
-  draftservice:
+  rabbitmq:
+    user: "0"
+    image: rabbitmq:3-management-alpine
+    container_name: rabbitmq
+    healthcheck:
+      test: rabbitmq-diagnostics check_port_connectivity
+      interval: 1s
+      timeout: 3s
+      retries: 30
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+  
+  publisherservice:
     build:
       context: .
-      dockerfile: DraftService/Dockerfile
+      dockerfile: ./PublisherService/Dockerfile
     ports:
-      - "6003:80"
+      - "8013:80"
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
       - ASPNETCORE_URLS=http://0.0.0.0:80
-      - ConnectionStrings__DraftDatabase=Server=draft-db;Database=Drafts;User Id=sa;Password=SuperSecret7!;Encrypt=false;
-      - SEQ_URL=http://seq:5341
-      - ZIPKIN_URL=http://zipkin:9411/api/v2/spans
     depends_on:
-      - draft-db
-  draft-db:
-        image: mcr.microsoft.com/azure-sql-edge:latest
-        environment:
-          MSSQL_SA_PASSWORD: "SuperSecret7!"
-          ACCEPT_EULA: "Y"
-        volumes:
-          - mssql-drafts:/var/opt/mssql
-  seq:
-    image: datalust/seq
-    ports:
-      - "5341:5341"
-      - "5342:80"
-    environment:
-      SEQ_FIRSTRUN_ADMINPASSWORD: "password"
-      ACCEPT_EULA: "Y"
-    volumes:
-      - rps_seq_data:/data
-  zipkin:
-    image: openzipkin/zipkin:3.4.1
-    ports:
-      - "9411:9411"
-    environment:
-      - STORAGE_TYPE=mysql
-      - MYSQL_HOST=zipkin-storage
-      - MYSQL_USER=zipkin
-      - MYSQL_PASS=zipkin
-      - MYSQL_DB=zipkin
-    depends_on:
-      - zipkin-storage
-  zipkin-storage:
-    image: openzipkin/zipkin-mysql
-    ports:
-      - "3306:3306"
-    volumes:
-      - zipkin_data:/mysql/data
-     
+      rabbitmq:
+        condition: service_healthy
 
-volumes:
-    mssql-drafts:
-    rps_seq_data:
-    zipkin_data:
-      
+  articleservice:
+    build:
+      context: .
+      dockerfile: ./ArticleService/dockerfile
+    ports:
+      - "8023:80"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_URLS=http://0.0.0.0:80
+    depends_on:
+      rabbitmq:
+        condition: service_healthy

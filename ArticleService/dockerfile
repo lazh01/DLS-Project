@@ -7,17 +7,23 @@ EXPOSE 80
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 WORKDIR /src
 
-# Copy csproj and restore
-COPY *.csproj ./
-RUN dotnet restore
+# Copy service csproj and shared library csproj
+COPY ["ArticleService/ArticleService.csproj", "ArticleService/"]
+COPY ["Messages/Messages.csproj", "Messages/"]
+
+# Restore dependencies
+RUN dotnet restore "ArticleService/ArticleService.csproj"
 
 # Copy all source code
-COPY . ./
-RUN dotnet build -c Release -o /app/build
+COPY . .
+
+# Build
+WORKDIR "/src/ArticleService"
+RUN dotnet build "ArticleService.csproj" -c Release -o /app/build
 
 # Stage 3: publish
 FROM build AS publish
-RUN dotnet publish -c Release -o /app/publish /p:UseAppHost=false
+RUN dotnet publish "ArticleService.csproj" -c Release -o /app/publish /p:UseAppHost=false
 
 # Stage 4: final image
 FROM base AS final

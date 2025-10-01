@@ -1,4 +1,4 @@
-namespace ArticleService.SharedModels;
+namespace PublisherService.ConsumerModels;
 public class CreateArticleRequest
 {
     public string Title { get; set; } = null!;

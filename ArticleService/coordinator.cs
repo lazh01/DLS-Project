@@ -18,18 +18,18 @@ public class Coordinator
     private const string GLOBAL_DB = "articles-global-db";
 
 
-    public async Task<DbConnection> GetConnectionByRegion(string region)
+    public async Task<DbConnection> GetConnectionByRegion(Continent region)
     {
-        return region.ToLower() switch
+        return region switch
         {
-            "africa" => await GetConnectionByServerName(AFRICA_DB),
-            "asia" => await GetConnectionByServerName(ASIA_DB),
-            "antarctica" => await GetConnectionByServerName(ANTARCTICA_DB),
-            "europe" => await GetConnectionByServerName(EUROPE_DB),
-            "north america" => await GetConnectionByServerName(NORTH_AMERICA_DB),
-            "south america" => await GetConnectionByServerName(SOUTH_AMERICA_DB),
-            "oceania" => await GetConnectionByServerName(OCEANIA_DB),
-            "global" => await GetConnectionByServerName(GLOBAL_DB),
+            Continent.africa => await GetConnectionByServerName(AFRICA_DB),
+            Continent.asia => await GetConnectionByServerName(ASIA_DB),
+            Continent.antarctica => await GetConnectionByServerName(ANTARCTICA_DB),
+            Continent.europe => await GetConnectionByServerName(EUROPE_DB),
+            Continent.north_america => await GetConnectionByServerName(NORTH_AMERICA_DB),
+            Continent.south_america => await GetConnectionByServerName(SOUTH_AMERICA_DB),
+            Continent.oceania => await GetConnectionByServerName(OCEANIA_DB),
+            Continent.global => await GetConnectionByServerName(GLOBAL_DB),
             _ => throw new ArgumentException($"Unknown region: {region}")
         };
     }

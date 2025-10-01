@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Identity.Client;
+using ArticleService.SharedModels;
 
 namespace ArticleService.Controllers
 {
