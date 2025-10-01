@@ -2,6 +2,7 @@
 using EasyNetQ;
 using Microsoft.Extensions.Caching.Memory;
 using SharedModels;
+using ArticleService.database;
 
 using ArticleService;
 
@@ -11,12 +12,13 @@ namespace Articleservice.Services
     {
         private readonly IBus _bus;
         private readonly IMemoryCache _cache;
-        private Database database = Database.GetInstance();
+        private readonly Database _database;
 
-        public PublishingConsumer(IBus bus, IMemoryCache cache)
+        public PublishingConsumer(IBus bus, IMemoryCache cache, Database database)
         {
             _bus = bus;
             _cache = cache;
+            _database = database;
         }
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -42,7 +44,6 @@ namespace Articleservice.Services
             _cache.Set(key, true, TimeSpan.FromSeconds(30));
             */
             // Process the message (e.g., log it, store it, etc.)
-            Database database = Database.GetInstance();
 
             var article = new Article
             {
@@ -52,7 +53,7 @@ namespace Articleservice.Services
                 Continent = message.Continent
             };
             Console.WriteLine("Inserting article into database...");
-            var newId = await database.InsertArticle(article);
+            var newId = await _database.InsertArticle(article);
             Console.WriteLine($"Inserted article with ID {newId}.");
             Console.WriteLine($"Received article: Title={message.Title}, Author={message.Author}, Continent={message.Continent}");
             

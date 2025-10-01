@@ -1,5 +1,6 @@
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
+using ArticleService.database;
 
 namespace ArticleService.Controllers;
 
@@ -7,17 +8,22 @@ namespace ArticleService.Controllers;
 [Route("api/[controller]")]
 public class DatabaseController : ControllerBase
 {
-    private Database database = Database.GetInstance();
-    
+    private readonly Database _database;
+
+    public DatabaseController(Database database)
+    {
+        _database = database;
+    }
+
     [HttpDelete]
     public async Task Delete()
     {
-        await database.DeleteDatabase();
+        await _database.DeleteDatabase();
     }
 
     [HttpPost]
     public async Task Post()
     {
-        await database.RecreateDatabase();
+        await _database.RecreateDatabase();
     }
 }

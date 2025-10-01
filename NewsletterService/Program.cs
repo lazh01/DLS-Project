@@ -1,20 +1,15 @@
-using Microsoft.Extensions.DependencyInjection;
-using Articleservice.Services;
-using ArticleService.database;
-
+using EasyNetQ;
+using NewsletterService.Services;
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
-builder.Services.RegisterEasyNetQ(
-    "host=rabbitmq;username=guest;password=guest"
-    );
-builder.Services.AddSingleton<Database>();
-builder.Services.AddMemoryCache();
+builder.Services.RegisterEasyNetQ("host=rabbitmq;username=guest;password=guest");
+builder.Services.AddHostedService<ArticleCreatedConsumer>();
 builder.Services.AddControllers();
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
-builder.Services.AddHostedService<PublishingConsumer>();
+
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.

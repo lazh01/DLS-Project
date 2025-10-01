@@ -111,6 +111,19 @@ services:
       ACCEPT_EULA: "Y"
     volumes:
       - mssql-global-articles:/var/opt/mssql
+  
+  newsletterservice:
+    build:
+      context: .
+      dockerfile: ./NewsletterService/Dockerfile
+    ports:
+      - "8033:80"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_URLS=http://0.0.0.0:80
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
 
 volumes:
   mssql-africa-articles:

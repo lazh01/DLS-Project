@@ -1,20 +1,23 @@
 
+using Azure.Core;
+using EasyNetQ;
+using Microsoft.Data.SqlClient;
+using SharedModels;
 using System.Data;
 using System.Data.Common;
 using System.Threading.Tasks;
-using Microsoft.Data.SqlClient;
 
-namespace ArticleService
+
+namespace ArticleService.database
 {
     public class Database
     {
         private Coordinator coordinator = new Coordinator();
-
-        private static Database instance = new Database();
-
-        public static Database GetInstance()
+        private readonly IBus _bus;
+        
+        public Database(IBus bus)
         {
-            return instance;
+            _bus = bus;
         }
 
 
@@ -72,27 +75,30 @@ namespace ArticleService
             return results;
         }
 
-        public async Task<List<long>> InsertSqlAsync(DbConnection connection, string sql)
+        public async Task<List<object[]>> InsertSqlAsync(DbConnection connection, string sql)
         {
-            using var trans = connection.BeginTransaction();
-            var cmd = connection.CreateCommand();
+            using var trans = await connection.BeginTransactionAsync();
+            using var cmd = connection.CreateCommand();
             cmd.Transaction = trans;
             cmd.CommandText = sql;
-            var insertedIds = new List<long>();
+
+            var insertedRows = new List<object[]>();
 
             using (var reader = await cmd.ExecuteReaderAsync())
             {
                 while (await reader.ReadAsync())
                 {
-                    insertedIds.Add(Convert.ToInt64(reader.GetValue(0)));
+                    var row = new object[reader.FieldCount];
+                    reader.GetValues(row); // fills the array with all columns
+                    insertedRows.Add(row);
                 }
             }
 
             await trans.CommitAsync();
 
-            Console.WriteLine($"Executed insert: {sql}, inserted IDs: {string.Join(", ", insertedIds)}");
+            Console.WriteLine($"Executed insert: {sql}, inserted rows: {insertedRows.Count}");
 
-            return insertedIds;
+            return insertedRows;
         }
 
         public async Task<int> DeleteSqlAsync(DbConnection connection, string sql)
@@ -135,19 +141,29 @@ namespace ArticleService
             """);*/
             var result = await InsertSqlAsync(connection, $"""
             INSERT INTO Articles (Title, Content, Author, Continent)
-            OUTPUT INSERTED.Id
+            OUTPUT INSERTED.Id, INSERTED.Title, INSERTED.Author, INSERTED.PublishedAt, INSERTED.CreatedAt, INSERTED.Continent
             VALUES ('{article.Title}', '{article.Content}', '{article.Author}', '{article.Continent}');
             """);
 
-            Console.WriteLine(result);
-            if (result is not List<long> rows || rows.Count == 0)
+
+            if (result is not List<object[]> rows || rows.Count == 0)
             {
                 return null;
             }
 
-            var id = rows[0];
-            Console.WriteLine($"Inserted article: {id}");
-            return id;
+            var row = result[0];
+            var createdEvent = new ArticleCreatedEvent
+            {
+                Id = Convert.ToInt64(row[0]),
+                Title = row[1]?.ToString() ?? "",
+                Author = row[2]?.ToString() ?? "",
+                PublishedAt = row[3] is DateTime dt ? dt : DateTime.Parse(row[3]?.ToString() ?? DateTime.UtcNow.ToString()),
+                Continent = row[5]?.ToString() ?? ""
+            };
+            Console.WriteLine("id: " + createdEvent.Id);
+            await _bus.PubSub.PublishAsync(createdEvent);
+            Console.WriteLine($"Inserted article: {createdEvent.Id}");
+            return createdEvent.Id;
         }
 
         public async Task<Article?> FindArticle(long id, string continent)

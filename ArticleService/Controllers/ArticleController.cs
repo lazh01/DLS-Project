@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Identity.Client;
 using ArticleService.SharedModels;
+using ArticleService.database;
 
 namespace ArticleService.Controllers
 {
@@ -8,12 +9,17 @@ namespace ArticleService.Controllers
     [Route("api/[controller]")]
     public class ArticleController : ControllerBase
     {
-        private Database database = Database.GetInstance();
+        private readonly Database _database;
+
+        public ArticleController(Database database)
+        {
+            _database = database;
+        }
 
         [HttpGet("{continent}/{id:long}", Name = "GetArticle")]
         public async Task<ActionResult<Article>> GetArticle(string continent, long id)
         {
-            var article = await database.FindArticle(id, continent);
+            var article = await _database.FindArticle(id, continent);
 
             if (article == null)
             {
@@ -33,7 +39,7 @@ namespace ArticleService.Controllers
                 Continent = request.Continent
             };
 
-            var newId = await database.InsertArticle(article);
+            var newId = await _database.InsertArticle(article);
             if (newId == null)
             {
                 return StatusCode(500, new { Message = "Failed to create article." });
@@ -44,14 +50,14 @@ namespace ArticleService.Controllers
             return CreatedAtRoute(
                 "GetArticle",
                 new { continent = article.Continent, id = id },
-                await database.FindArticle(id, article.Continent)
+                await _database.FindArticle(id, article.Continent)
             );
         }
 
         [HttpDelete("{continent}/{id:long}")]
         public async Task<ActionResult> Delete(long id, string continent)
         {
-            var affected = await database.DeleteArticle(id, continent);
+            var affected = await _database.DeleteArticle(id, continent);
 
             if (affected == 0)
             {
@@ -64,7 +70,7 @@ namespace ArticleService.Controllers
         [HttpPut]
         public async Task<ActionResult> UpdateArticle(Article article)
         {
-            var affected = await database.UpdateArticle(article);
+            var affected = await _database.UpdateArticle(article);
             if (affected == 0)
             {
                 return NotFound(new { Message = $"Article with ID {article.Id} not found in {article.Continent}." });
