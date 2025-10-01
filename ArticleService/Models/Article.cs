@@ -1,14 +1,3 @@
-public enum Continent
-{
-    africa,
-    asia,
-    antarctica,
-    europe,
-    north_america,
-    south_america,
-    oceania,
-    global
-}
 
 public class Article
 {
@@ -18,7 +7,7 @@ public class Article
     public string Author { get; set; } = null!;
     public DateTime PublishedAt { get; set; } = DateTime.UtcNow;
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
-    public Continent Continent { get; set; } = Continent.Global;
+    public string Continent { get; set; } = null!;
 
 }
 

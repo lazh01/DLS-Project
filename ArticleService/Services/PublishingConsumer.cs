@@ -1,6 +1,9 @@
-﻿using EasyNetQ;
+﻿using Azure.Core;
+using EasyNetQ;
 using Microsoft.Extensions.Caching.Memory;
 using SharedModels;
+
+using ArticleService;
 
 namespace Articleservice.Services
 {
@@ -8,6 +11,7 @@ namespace Articleservice.Services
     {
         private readonly IBus _bus;
         private readonly IMemoryCache _cache;
+        private Database database = Database.GetInstance();
 
         public PublishingConsumer(IBus bus, IMemoryCache cache)
         {
@@ -26,7 +30,7 @@ namespace Articleservice.Services
             await Task.Delay(Timeout.Infinite, stoppingToken);
         }
 
-        private Task HandleMessage(CreateArticleRequest message)
+        private async Task HandleMessage(CreateArticleRequest message)
         {
             /*var key = $"{message.Title}-{message.Author}";
 
@@ -38,9 +42,21 @@ namespace Articleservice.Services
             _cache.Set(key, true, TimeSpan.FromSeconds(30));
             */
             // Process the message (e.g., log it, store it, etc.)
+            Database database = Database.GetInstance();
+
+            var article = new Article
+            {
+                Title = message.Title,
+                Content = message.Content,
+                Author = message.Author,
+                Continent = message.Continent
+            };
+            Console.WriteLine("Inserting article into database...");
+            var newId = await database.InsertArticle(article);
+            Console.WriteLine($"Inserted article with ID {newId}.");
             Console.WriteLine($"Received article: Title={message.Title}, Author={message.Author}, Continent={message.Continent}");
-            // Simulate some processing work
-            return Task.CompletedTask;
+            
+            return;
         }
     }
 }

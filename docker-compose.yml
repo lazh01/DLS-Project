@@ -1,6 +1,5 @@
 services:
   rabbitmq:
-    user: "0"
     image: rabbitmq:3-management-alpine
     container_name: rabbitmq
     healthcheck:
@@ -11,6 +10,8 @@ services:
     ports:
       - "5672:5672"
       - "15672:15672"
+    volumes:
+    - rabbitmq-data:/var/lib/rabbitmq
   
   publisherservice:
     build:
@@ -37,3 +38,87 @@ services:
     depends_on:
       rabbitmq:
         condition: service_healthy
+      articles-africa-db:
+              condition: service_started
+      articles-asia-db:
+              condition: service_started
+      articles-antarctica-db:
+              condition: service_started
+      articles-europe-db:
+              condition: service_started
+      articles-north-america-db:
+              condition: service_started
+      articles-south-america-db:
+              condition: service_started
+      articles-oceania-db:
+              condition: service_started
+      articles-global-db:
+              condition: service_started
+
+  articles-africa-db:
+    image: mcr.microsoft.com/azure-sql-edge:latest
+    environment:
+        MSSQL_SA_PASSWORD: "SuperSecret7!"
+        ACCEPT_EULA: "Y"
+    volumes:
+        - mssql-africa-articles:/var/opt/mssql
+  articles-asia-db:
+    image: mcr.microsoft.com/azure-sql-edge:latest
+    environment:
+      MSSQL_SA_PASSWORD: "SuperSecret7!"
+      ACCEPT_EULA: "Y"
+    volumes:
+      - mssql-asia-articles:/var/opt/mssql
+  articles-antarctica-db:
+    image: mcr.microsoft.com/azure-sql-edge:latest
+    environment:
+      MSSQL_SA_PASSWORD: "SuperSecret7!"
+      ACCEPT_EULA: "Y"
+    volumes:
+      - mssql-antarctica-articles:/var/opt/mssql
+  articles-europe-db:
+    image: mcr.microsoft.com/azure-sql-edge:latest
+    environment:
+      MSSQL_SA_PASSWORD: "SuperSecret7!"
+      ACCEPT_EULA: "Y"
+    volumes:
+      - mssql-europe-articles:/var/opt/mssql
+  articles-north-america-db:
+    image: mcr.microsoft.com/azure-sql-edge:latest
+    environment:
+      MSSQL_SA_PASSWORD: "SuperSecret7!"
+      ACCEPT_EULA: "Y"
+    volumes:
+      - mssql-north-america-articles:/var/opt/mssql
+  articles-south-america-db:
+    image: mcr.microsoft.com/azure-sql-edge:latest
+    environment:
+      MSSQL_SA_PASSWORD: "SuperSecret7!"
+      ACCEPT_EULA: "Y"
+    volumes:
+      - mssql-south-america-articles:/var/opt/mssql
+  articles-oceania-db:
+    image: mcr.microsoft.com/azure-sql-edge:latest
+    environment:
+      MSSQL_SA_PASSWORD: "SuperSecret7!"
+      ACCEPT_EULA: "Y"
+    volumes:
+      - mssql-oceania-articles:/var/opt/mssql
+  articles-global-db:
+    image: mcr.microsoft.com/azure-sql-edge:latest
+    environment:
+      MSSQL_SA_PASSWORD: "SuperSecret7!"
+      ACCEPT_EULA: "Y"
+    volumes:
+      - mssql-global-articles:/var/opt/mssql
+
+volumes:
+  mssql-africa-articles:
+  mssql-asia-articles:
+  mssql-antarctica-articles:
+  mssql-europe-articles:
+  mssql-north-america-articles:
+  mssql-south-america-articles:
+  mssql-oceania-articles:
+  mssql-global-articles:
+  rabbitmq-data:  
