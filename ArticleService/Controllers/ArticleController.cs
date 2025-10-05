@@ -2,6 +2,8 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Identity.Client;
 using ArticleService.SharedModels;
 using ArticleService.database;
+using Messages.SharedModels;
+using Articleservice.Models;
 
 namespace ArticleService.Controllers
 {
@@ -17,7 +19,7 @@ namespace ArticleService.Controllers
         }
 
         [HttpGet("{continent}/{id:long}", Name = "GetArticle")]
-        public async Task<ActionResult<Article>> GetArticle(string continent, long id)
+        public async Task<ActionResult<ArticleDTO>> GetArticle(string continent, long id)
         {
             var article = await _database.FindArticle(id, continent);
 
@@ -25,11 +27,12 @@ namespace ArticleService.Controllers
             {
                 return NotFound(new { Message = $"Article with ID {id} in {continent} not found." });
             }
-            return Ok(article);
+            ArticleDTO articledto = ArticleConverter.ToDTO(article);
+            return Ok(articledto);
         }
 
         [HttpPost]
-        public async Task<ActionResult<Article>> CreateArticle(CreateArticleRequest request)
+        public async Task<ActionResult<ArticleDTO>> CreateArticle(CreateArticleRequest request)
         {
             var article = new Article
             {
@@ -68,14 +71,29 @@ namespace ArticleService.Controllers
         }
 
         [HttpPut]
-        public async Task<ActionResult> UpdateArticle(Article article)
+        public async Task<ActionResult> UpdateArticle(ArticleDTO article_dto)
         {
+            Article article = ArticleConverter.FromDTO(article_dto);
             var affected = await _database.UpdateArticle(article);
             if (affected == 0)
             {
                 return NotFound(new { Message = $"Article with ID {article.Id} not found in {article.Continent}." });
             }
             return NoContent();
+        }
+
+        [HttpPost("fetch")]
+        public async Task<ActionResult<List<ArticleDTO>>> FetchArticles(FetchArticlesRequest request)
+        {
+            if (string.IsNullOrEmpty(request.Continent))
+            {
+                return BadRequest(new { Message = "Continent is required." });
+            }
+            List<Article> articles = await _database.FetchArticles(request);
+            List<ArticleDTO> articlesDTO = articles
+                .Select(ArticleConverter.ToDTO)
+                .ToList();
+            return Ok(articlesDTO);
         }
     }
 }

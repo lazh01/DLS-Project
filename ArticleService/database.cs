@@ -6,6 +6,7 @@ using SharedModels;
 using System.Data;
 using System.Data.Common;
 using System.Threading.Tasks;
+using Messages.SharedModels;
 
 
 namespace ArticleService.database
@@ -213,6 +214,43 @@ namespace ArticleService.database
             WHERE Id = {article.Id}
             """);
             return affected;
+        }
+
+        public async Task<List<Article>> FetchArticles(FetchArticlesRequest request)
+        {
+            var connection = await coordinator.GetConnectionByRegion(request.Continent);
+            var conditions = new List<string>();
+            if (request.StartDate.HasValue)
+            {
+                conditions.Add($"PublishedAt >= '{request.StartDate.Value:yyyy-MM-dd}'");
+            }
+            if (request.EndDate.HasValue)
+            {
+                conditions.Add($"PublishedAt < '{request.EndDate.Value.AddDays(1):yyyy-MM-dd}'");
+            }
+            var whereClause = conditions.Count > 0 ? " AND " + string.Join(" AND ", conditions) : "";
+            var limitClause = request.MaxArticles.HasValue ? $"TOP {request.MaxArticles.Value}" : "";
+            var result = await SelectSqlAsync(connection, $"""
+            SELECT {limitClause} * FROM Articles
+            WHERE Continent = '{request.Continent}'{whereClause}
+            ORDER BY PublishedAt DESC
+            """);
+            if (result is not List<Dictionary<string, object>> rows)
+            {
+                return new List<Article>();
+            }
+            var articles = rows.Select(row => new Article
+            {
+                Id = (long)row["Id"],
+                Title = (string)row["Title"],
+                Content = (string)row["Content"],
+                Author = (string)row["Author"],
+                PublishedAt = (DateTime)row["PublishedAt"],
+                CreatedAt = (DateTime)row["CreatedAt"],
+                Continent = (string)row["Continent"]
+            }).ToList();
+            Console.WriteLine($"Fetched {articles.Count} articles for continent {request.Continent}");
+            return articles;
         }
     }
 }

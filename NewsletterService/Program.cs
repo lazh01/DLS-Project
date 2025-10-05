@@ -5,6 +5,7 @@ var builder = WebApplication.CreateBuilder(args);
 // Add services to the container.
 builder.Services.RegisterEasyNetQ("host=rabbitmq;username=guest;password=guest");
 builder.Services.AddHostedService<ArticleCreatedConsumer>();
+builder.Services.AddScoped<FetchArticlesService>();
 builder.Services.AddControllers();
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
