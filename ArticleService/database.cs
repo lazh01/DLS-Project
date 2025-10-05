@@ -7,6 +7,7 @@ using System.Data;
 using System.Data.Common;
 using System.Threading.Tasks;
 using Messages.SharedModels;
+using Articleservice.Services;
 
 
 namespace ArticleService.database
@@ -15,10 +16,12 @@ namespace ArticleService.database
     {
         private Coordinator coordinator = new Coordinator();
         private readonly IBus _bus;
+        private readonly RedisCacheService _cacheService;
         
-        public Database(IBus bus)
+        public Database(IBus bus, RedisCacheService cacheService)
         {
             _bus = bus;
+            _cacheService = cacheService;
         }
 
 
@@ -169,6 +172,16 @@ namespace ArticleService.database
 
         public async Task<Article?> FindArticle(long id, string continent)
         {
+            if (continent == "global")
+            {
+                var cached = await _cacheService.GetArticleByIdAsync(id);
+                if (cached != null)
+                {
+                    Console.WriteLine($"Fetched article from cache: {cached.Title}");
+                    return cached;
+                }
+            }
+
             var connection = await coordinator.GetConnectionByRegion(continent);
             var result = await SelectSqlAsync(connection, $"""
             select * from Articles where Id = {id}
@@ -218,6 +231,30 @@ namespace ArticleService.database
 
         public async Task<List<Article>> FetchArticles(FetchArticlesRequest request)
         {
+            if (request.Continent == "global")
+            {
+                // Define the cached window (last 14 days)
+                var now = DateOnly.FromDateTime(DateTime.UtcNow);
+                var earliestCachedDate = now.AddDays(-14);
+
+                // Determine requested range
+                var start = request.StartDate ?? earliestCachedDate;
+                var end = request.EndDate ?? now;
+
+                // Only use cache if the requested range is entirely within cached window
+                if (start >= earliestCachedDate && end <= now)
+                {
+                    // Fetch from cache
+                    var cached_articles = await _cacheService.GetArticlesInRangeAsync(start, end);
+
+                    // Apply MaxArticles if requested
+                    if (request.MaxArticles.HasValue)
+                        cached_articles = cached_articles.Take(request.MaxArticles.Value).ToList();
+                    Console.WriteLine($"Fetched {cached_articles.Count} articles from cache for continent {request.Continent}");
+                    return cached_articles;
+                }
+            }
+
             var connection = await coordinator.GetConnectionByRegion(request.Continent);
             var conditions = new List<string>();
             if (request.StartDate.HasValue)
