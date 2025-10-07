@@ -23,7 +23,7 @@ namespace Articleservice.Services
         {
             string key = $"article:global:{article.Id}";
             var serialized = JsonSerializer.Serialize(article);
-            await _cache.StringSetAsync(key, serialized, TimeSpan.FromDays(14));
+            await _cache.StringSetAsync(key, serialized, TimeSpan.FromDays(1));
         }
 
         public async Task<List<Article>?> GetArticlesByDateAsync(DateOnly date)
@@ -38,7 +38,7 @@ namespace Articleservice.Services
         {
             string key = $"articles:global:{date:yyyy-MM-dd}";
             var serialized = JsonSerializer.Serialize(articles);
-            await _cache.StringSetAsync(key, serialized, TimeSpan.FromDays(14));
+            await _cache.StringSetAsync(key, serialized, TimeSpan.FromDays(1));
         }
 
         public async Task AppendArticleToDateAsync(Article article)
