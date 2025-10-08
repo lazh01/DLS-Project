@@ -56,5 +56,4 @@ app.UseHttpsRedirection();
 app.UseAuthorization();
 
 app.MapControllers();
-MonitorService.Log.Error("The god of the day is {@God}", "odin");
 app.Run();

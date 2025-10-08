@@ -31,15 +31,14 @@ public static class MonitorService
             .SetSampler(new AlwaysOnSampler())
             .Build();
 
-
-        Console.WriteLine(Environment.GetEnvironmentVariable("LOKI_URL"));
+        
         Serilog.Log.Logger = new LoggerConfiguration()
             .MinimumLevel.Verbose()
             .Enrich.FromLogContext()
             .Enrich.WithProperty("Service", ServiceName)
             .WriteTo.Seq(Environment.GetEnvironmentVariable("SEQ_URL") ?? "http://localhost:5341")
             .WriteTo.GrafanaLoki(Environment.GetEnvironmentVariable("LOKI_URL") ?? "http://localhost:3100",
-            labels: new[] { new LokiLabel { Key = "service_name", Value = ServiceName } }
+                labels: new[] { new LokiLabel { Key = "service_name", Value = ServiceName } }
             )
             .CreateLogger();
     }

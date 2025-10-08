@@ -24,7 +24,7 @@ services:
       - ASPNETCORE_URLS=http://0.0.0.0:80
       - SEQ_URL=http://seq:5341
       - ZIPKIN_URL=http://zipkin:9411/api/v2/spans
-      - LOKI_URL=http://loki:3100/loki/api/v1/push
+      - LOKI_URL=http://loki:3100
     depends_on:
       rabbitmq:
         condition: service_healthy
@@ -41,7 +41,7 @@ services:
       - REDIS_CONNECTION=redis:6379
       - SEQ_URL=http://seq:5341
       - ZIPKIN_URL=http://zipkin:9411/api/v2/spans
-      - LOKI_URL=http://loki:3100/loki/api/v1/push
+      - LOKI_URL=http://loki:3100
     depends_on:
       rabbitmq:
         condition: service_healthy
@@ -139,7 +139,7 @@ services:
       - REDIS_CONNECTION=commentcache:6379
       - SEQ_URL=http://seq:5341
       - ZIPKIN_URL=http://zipkin:9411/api/v2/spans
-      - LOKI_URL=http://loki:3100/loki/api/v1/push
+      - LOKI_URL=http://loki:3100
     depends_on:
       - comment-db
       - commentcache
@@ -188,7 +188,7 @@ services:
       - ASPNETCORE_URLS=http://0.0.0.0:80
       - SEQ_URL=http://seq:5341
       - ZIPKIN_URL=http://zipkin:9411/api/v2/spans
-      - LOKI_URL=http://loki:3100/loki/api/v1/push
+      - LOKI_URL=http://loki:3100
     depends_on:
       rabbitmq:
         condition: service_healthy

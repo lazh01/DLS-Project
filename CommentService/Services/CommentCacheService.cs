@@ -2,7 +2,7 @@
 {
     using StackExchange.Redis;
     using System.Text.Json;
-
+    using Monitoring;
     public class CommentCacheService
     {
         private readonly IDatabase _cache;
@@ -34,6 +34,9 @@
                     Console.WriteLine($"Cache limit reached. Evicting least recently used article key(s): {string.Join(", ", toRemove.Select(k => (string)k))}");
                     foreach (var lruArticleKey in toRemove)
                     {
+                        MonitorService.Log.Information(
+                            "CACHE EVICTION: Removing article key {ArticleKey} due to LRU policy",
+                            (string)lruArticleKey);
                         await RemoveArticleKey((RedisKey)(string)lruArticleKey);
                     }
                 }
@@ -46,6 +49,11 @@
             await _cache.StringSetAsync(commentKey, json);
             await _cache.SortedSetAddAsync(articleKey, comment.Id.ToString(), timestamp);
             await _cache.SortedSetAddAsync(ArticleLruKey, articleKey, timestamp);
+
+            MonitorService.Log.Information(
+                "CACHE ADD: Comment {CommentId} added under article key {ArticleKey}",
+                comment.Id, articleKey);
+
             Console.WriteLine($"Comment {comment.Id} added to cache under article key {articleKey}.");
         }
 
@@ -56,9 +64,12 @@
             var commentIds = await _cache.SortedSetRangeByRankAsync(articleKey);
             if (commentIds.Length == 0) 
             {
+                MonitorService.Log.Information("CACHE MISS: Article {ArticleId} in continent {Continent} not in cache", article_id, continent);
                 Console.WriteLine($"No comments found in cache for article {article_id} in continent {continent}.");
                 return null;
             }
+
+            MonitorService.Log.Information("CACHE HIT: Article {ArticleId} in continent {Continent}", article_id, continent);
 
             var commentKeys = commentIds
                 .Select(id => (RedisKey)$"comment:{id}")
