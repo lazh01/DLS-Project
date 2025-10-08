@@ -22,6 +22,9 @@ services:
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
       - ASPNETCORE_URLS=http://0.0.0.0:80
+      - SEQ_URL=http://seq:5341
+      - ZIPKIN_URL=http://zipkin:9411/api/v2/spans
+      - LOKI_URL=http://loki:3100/loki/api/v1/push
     depends_on:
       rabbitmq:
         condition: service_healthy
@@ -36,6 +39,9 @@ services:
       - ASPNETCORE_ENVIRONMENT=Development
       - ASPNETCORE_URLS=http://0.0.0.0:80
       - REDIS_CONNECTION=redis:6379
+      - SEQ_URL=http://seq:5341
+      - ZIPKIN_URL=http://zipkin:9411/api/v2/spans
+      - LOKI_URL=http://loki:3100/loki/api/v1/push
     depends_on:
       rabbitmq:
         condition: service_healthy
@@ -131,6 +137,9 @@ services:
       - ASPNETCORE_ENVIRONMENT=Development
       - ASPNETCORE_URLS=http://0.0.0.0:80
       - REDIS_CONNECTION=commentcache:6379
+      - SEQ_URL=http://seq:5341
+      - ZIPKIN_URL=http://zipkin:9411/api/v2/spans
+      - LOKI_URL=http://loki:3100/loki/api/v1/push
     depends_on:
       - comment-db
       - commentcache
@@ -177,9 +186,85 @@ services:
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
       - ASPNETCORE_URLS=http://0.0.0.0:80
+      - SEQ_URL=http://seq:5341
+      - ZIPKIN_URL=http://zipkin:9411/api/v2/spans
+      - LOKI_URL=http://loki:3100/loki/api/v1/push
     depends_on:
       rabbitmq:
         condition: service_healthy
+
+  draftservice:
+    build:
+      context: .
+      dockerfile: DraftService/Dockerfile
+    ports:
+      - "6003:80"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_URLS=http://0.0.0.0:80
+      - ConnectionStrings__DraftDatabase=Server=draft-db;Database=Drafts;User Id=sa;Password=SuperSecret7!;Encrypt=false;
+      - SEQ_URL=http://seq:5341
+      - ZIPKIN_URL=http://zipkin:9411/api/v2/spans
+      - LOKI_URL=http://loki:3100
+    depends_on:
+      - draft-db
+  draft-db:
+    image: mcr.microsoft.com/azure-sql-edge:latest
+    environment:
+        MSSQL_SA_PASSWORD: "SuperSecret7!"
+        ACCEPT_EULA: "Y"
+    volumes:
+        - mssql-drafts:/var/opt/mssql
+  seq:
+    image: datalust/seq
+    ports:
+      - "5341:5341"
+      - "5342:80"
+    environment:
+      SEQ_FIRSTRUN_ADMINPASSWORD: "password"
+      ACCEPT_EULA: "Y"
+    volumes:
+      - rps_seq_data:/data
+  zipkin:
+    image: openzipkin/zipkin:3.4.1
+    ports:
+      - "9411:9411"
+    environment:
+      - STORAGE_TYPE=mysql
+      - MYSQL_HOST=zipkin-storage
+      - MYSQL_USER=zipkin
+      - MYSQL_PASS=zipkin
+      - MYSQL_DB=zipkin
+    depends_on:
+      - zipkin-storage
+  zipkin-storage:
+    image: openzipkin/zipkin-mysql
+    ports:
+      - "3306:3306"
+    volumes:
+      - zipkin_data:/mysql/data
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    ports:
+    - "3000:3000"
+    environment:
+    - GF_SECURITY_ADMIN_USER=admin
+    - GF_SECURITY_ADMIN_PASSWORD=admin
+    - GF_USERS_ALLOW_SIGN_UP=false
+    volumes:
+    - grafana_data:/var/lib/grafana
+    depends_on:
+    - seq
+    - zipkin
+
+  loki:
+    image: grafana/loki:latest
+    ports:
+      - "3100:3100"
+    volumes:
+      - loki_data:/loki
 
 volumes:
   mssql-africa-articles:
@@ -192,4 +277,9 @@ volumes:
   mssql-global-articles:
   rabbitmq-data:
   mssql-profanities:
-  mssql-comments: 
+  mssql-comments:
+  mssql-drafts:
+  rps_seq_data:
+  zipkin_data:
+  grafana_data:  
+  loki_data:  

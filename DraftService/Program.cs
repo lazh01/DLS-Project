@@ -2,7 +2,12 @@ using DraftService.Data;
 using DraftService.Services;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
+using Monitoring;
 
+Serilog.Debugging.SelfLog.Enable(msg =>
+{
+    Console.WriteLine($"SELFLOG: {msg}");
+});
 var builder = WebApplication.CreateBuilder(args);
 
 var connectionString1 = builder.Configuration.GetConnectionString("DraftDatabase");
@@ -51,5 +56,5 @@ app.UseHttpsRedirection();
 app.UseAuthorization();
 
 app.MapControllers();
-
+MonitorService.Log.Error("The god of the day is {@God}", "odin");
 app.Run();

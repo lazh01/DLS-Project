@@ -5,10 +5,9 @@ using Serilog;
 using Serilog.Core;
 using System.Diagnostics;
 using System.Reflection;
+using Serilog.Sinks.Grafana.Loki;
 
 namespace Monitoring;
-
-
 public static class MonitorService
 {
     public static readonly string ServiceName = Assembly.GetCallingAssembly().GetName().Name ?? "UnknownService";
@@ -33,10 +32,15 @@ public static class MonitorService
             .Build();
 
 
-
+        Console.WriteLine(Environment.GetEnvironmentVariable("LOKI_URL"));
         Serilog.Log.Logger = new LoggerConfiguration()
             .MinimumLevel.Verbose()
+            .Enrich.FromLogContext()
+            .Enrich.WithProperty("Service", ServiceName)
             .WriteTo.Seq(Environment.GetEnvironmentVariable("SEQ_URL") ?? "http://localhost:5341")
+            .WriteTo.GrafanaLoki(Environment.GetEnvironmentVariable("LOKI_URL") ?? "http://localhost:3100",
+            labels: new[] { new LokiLabel { Key = "Service", Value = ServiceName } }
+            )
             .CreateLogger();
     }
 }
