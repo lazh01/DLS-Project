@@ -64,7 +64,7 @@ namespace CommentService
 
         }
 
-        public async Task<long> InsertCommentAsync(CreateCommentRequest request)
+        public async Task<Comment?> InsertCommentAsync(CreateCommentRequest request)
         {
             // Returns the Id of the newly inserted comment
             using var connection = new SqlConnection(connectionString);
@@ -73,10 +73,10 @@ namespace CommentService
             try
             {
                 var sql = @"
-            INSERT INTO Comments (ArticleId, Username, Content, Continent)
-            VALUES (@ArticleId, @Username, @Content, @Continent);
-            SELECT CAST(SCOPE_IDENTITY() AS BIGINT);
-        ";
+                    INSERT INTO Comments (ArticleId, Username, Content, Continent)
+                    OUTPUT INSERTED.Id, INSERTED.ArticleId, INSERTED.Username, INSERTED.Content, INSERTED.CreatedAt, INSERTED.Continent
+                    VALUES (@ArticleId, @Username, @Content, @Continent);
+                ";
 
                 using var cmd = new SqlCommand(sql, connection);
                 cmd.Parameters.AddWithValue("@ArticleId", request.ArticleId);
@@ -84,8 +84,43 @@ namespace CommentService
                 cmd.Parameters.AddWithValue("@Content", request.TextContent);
                 cmd.Parameters.AddWithValue("@Continent", request.ArticleContinent);
 
-                var result = await cmd.ExecuteScalarAsync();
-                return (long)result!;
+                using var reader = await cmd.ExecuteReaderAsync();
+
+                if (await reader.ReadAsync())
+                {
+                    return new Comment
+                    {
+                        Id = reader.GetInt64(0),
+                        ArticleId = reader.GetInt64(1),
+                        Username = reader.GetString(2),
+                        TextContent = reader.GetString(3),
+                        CreatedAt = reader.GetDateTime(4),
+                        ArticleContinent = reader.GetString(5)
+                    };
+                }
+            }
+            finally
+            {
+                await connection.CloseAsync();
+            }
+            return null;
+        }
+
+        public async Task<int> DeleteCommentAsync(long id, long articleId, string continent)
+        {
+            using var connection = new SqlConnection(connectionString);
+            await connection.OpenAsync();
+            try
+            {
+                var sql = @"
+                    DELETE FROM Comments 
+                    WHERE Id = @Id AND ArticleId = @ArticleId AND Continent = @Continent;
+                    ";
+                using var cmd = new SqlCommand(sql, connection);
+                cmd.Parameters.AddWithValue("@Id", id);
+                cmd.Parameters.AddWithValue("@ArticleId", articleId);
+                cmd.Parameters.AddWithValue("@Continent", continent);
+                return await cmd.ExecuteNonQueryAsync();
             }
             finally
             {
@@ -93,6 +128,26 @@ namespace CommentService
             }
         }
 
+        public async Task<int> DeleteArticleAsync(long articleId, string continent)
+        {
+            using var connection = new SqlConnection(connectionString);
+            await connection.OpenAsync();
+            try
+            {
+                var sql = @"
+                    DELETE FROM Comments 
+                    WHERE ArticleId = @ArticleId AND Continent = @Continent;
+                    ";
+                using var cmd = new SqlCommand(sql, connection);
+                cmd.Parameters.AddWithValue("@ArticleId", articleId);
+                cmd.Parameters.AddWithValue("@Continent", continent);
+                return await cmd.ExecuteNonQueryAsync();
+            }
+            finally
+            {
+                await connection.CloseAsync();
+            }
+        }
 
         public static async Task<List<Comment>> FetchCommentsAsync(long articleId, string continent)
         {

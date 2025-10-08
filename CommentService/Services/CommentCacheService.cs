@@ -17,6 +17,7 @@
 
         public async Task AddCommentToCache(Comment comment)
         {
+            Console.WriteLine($"Adding comment {comment.Id} to cache.");
             var commentKey = $"comment:{comment.Id}";
             var articleKey = $"continent:{comment.ArticleContinent}article:{comment.ArticleId}:comments";
             var timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
@@ -25,10 +26,12 @@
 
             if (!articleExists)
             {
+                Console.WriteLine($"Article key {articleKey} does not exist in cache. Checking LRU cache size.");
                 var count = await _cache.SortedSetLengthAsync(ArticleLruKey);
                 if (count >= MaxCachedArticles)
                 {
                     var toRemove = await _cache.SortedSetRangeByRankAsync(ArticleLruKey, 0, 0);
+                    Console.WriteLine($"Cache limit reached. Evicting least recently used article key(s): {string.Join(", ", toRemove.Select(k => (string)k))}");
                     foreach (var lruArticleKey in toRemove)
                     {
                         await RemoveArticleKey((RedisKey)(string)lruArticleKey);
@@ -43,14 +46,19 @@
             await _cache.StringSetAsync(commentKey, json);
             await _cache.SortedSetAddAsync(articleKey, comment.Id.ToString(), timestamp);
             await _cache.SortedSetAddAsync(ArticleLruKey, articleKey, timestamp);
+            Console.WriteLine($"Comment {comment.Id} added to cache under article key {articleKey}.");
         }
 
         public async Task<List<Comment>?> GetCommentsByArticleAndContinent(long article_id, string continent)
         {
+            Console.WriteLine($"Fetching comments for article {article_id} in continent {continent} from cache.");
             var articleKey = $"continent:{continent}article:{article_id}:comments";
             var commentIds = await _cache.SortedSetRangeByRankAsync(articleKey);
-            if (commentIds.Length == 0)
+            if (commentIds.Length == 0) 
+            {
+                Console.WriteLine($"No comments found in cache for article {article_id} in continent {continent}.");
                 return null;
+            }
 
             var commentKeys = commentIds
                 .Select(id => (RedisKey)$"comment:{id}")
@@ -65,24 +73,18 @@
 
             var timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
             await _cache.SortedSetAddAsync(ArticleLruKey, articleKey, timestamp);
-
+            Console.WriteLine($"Fetched {comments.Count} comments from cache for article {article_id} in continent {continent}.");
             return comments;
         }
 
         public async Task RemoveCommentFromCache(long articleId, string continent, long commentId)
         {
+            Console.WriteLine($"Removing comment {commentId} from cache.");
             var articleKey = $"continent:{continent}article:{articleId}:comments";
             var commentKey = $"comment:{commentId}";
 
             await _cache.KeyDeleteAsync(commentKey);
             await _cache.SortedSetRemoveAsync(articleKey, commentId.ToString());
-        }
-
-        public async Task UpdateCommentInCache(Comment comment)
-        {
-            var commentKey = $"comment:{comment.Id}";
-            var json = JsonSerializer.Serialize(comment);
-            await _cache.StringSetAsync(commentKey, json);
         }
 
         public async Task RemoveArticleFromCache(long articleId, string continent)
@@ -91,8 +93,9 @@
             await RemoveArticleKey(articleKey);
         }
 
-        public async Task RemoveArticleKey(string articleKey)
+        private async Task RemoveArticleKey(string articleKey)
         {
+            Console.WriteLine($"Removing article key {articleKey} and its comments from cache.");
             if (!await _cache.KeyExistsAsync(articleKey))
                 return;
 

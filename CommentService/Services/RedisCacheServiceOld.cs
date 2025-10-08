@@ -2,12 +2,12 @@
 using System.Text.Json;
 namespace CommentService.Services
 {
-    public class RedisCacheService
+    public class RedisCacheServiceOld
     {
         private readonly IDatabase _cache;
         private const string LruIndexKey = "articles:lru";
         private const int MaxArticles = 30;
-        public RedisCacheService(string redisConnection)
+        public RedisCacheServiceOld(string redisConnection)
         {
             var redis = ConnectionMultiplexer.Connect(redisConnection);
             _cache = redis.GetDatabase();
