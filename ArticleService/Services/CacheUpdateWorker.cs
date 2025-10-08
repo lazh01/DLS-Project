@@ -24,17 +24,7 @@
                     Console.WriteLine("Error updating cache: " + ex.Message);
                 }
 
-                var now = DateTime.UtcNow;
-                var nextRun = new DateTime(now.Year, now.Month, now.Day, 2, 0, 0, DateTimeKind.Utc);
-
-                
-                if (nextRun <= now)
-                    nextRun = nextRun.AddDays(1);
-
-                var delay = nextRun - now;
-                Console.WriteLine($"Next cache update scheduled in {delay.TotalMinutes:F1} minutes.");
-
-                await Task.Delay(delay, stoppingToken);
+                await Task.Delay(TimeSpan.FromMinutes(5), stoppingToken);
             }
         }
     }

@@ -19,11 +19,25 @@ namespace Articleservice.Services
             return JsonSerializer.Deserialize<Article>(value);
         }
 
-        public async Task SetArticleByIdAsync(Article article)
+        public async Task SetArticleByIdAsync(Article article, TimeSpan? ttl = null)
         {
             string key = $"article:global:{article.Id}";
             var serialized = JsonSerializer.Serialize(article);
-            await _cache.StringSetAsync(key, serialized, TimeSpan.FromDays(1));
+
+            TimeSpan expiration;
+            if (ttl.HasValue)
+            {
+                expiration = ttl.Value;
+            }
+            else
+            {
+                // Default: expire 15 days after PublishedAt to cover the rolling window
+                expiration = article.PublishedAt.Date.AddDays(15) - DateTime.UtcNow;
+                if (expiration <= TimeSpan.Zero)
+                    expiration = TimeSpan.FromSeconds(1); // expire immediately if old
+            }
+
+            await _cache.StringSetAsync(key, serialized, expiration);
         }
 
         public async Task<List<Article>?> GetArticlesByDateAsync(DateOnly date)
@@ -34,19 +48,31 @@ namespace Articleservice.Services
             return JsonSerializer.Deserialize<List<Article>>(value);
         }
 
-        public async Task SetArticlesByDateAsync(DateOnly date, List<Article> articles)
+        public async Task SetArticlesByDateAsync(DateOnly date, List<Article> articles, TimeSpan ttl)
         {
             string key = $"articles:global:{date:yyyy-MM-dd}";
             var serialized = JsonSerializer.Serialize(articles);
-            await _cache.StringSetAsync(key, serialized, TimeSpan.FromDays(1));
+            await _cache.StringSetAsync(key, serialized, ttl);
         }
 
-        public async Task AppendArticleToDateAsync(Article article)
+        public async Task AppendArticleToDateAsync(Article article, TimeSpan? ttl = null)
         {
             var date = DateOnly.FromDateTime(article.PublishedAt);
             var existing = await GetArticlesByDateAsync(date) ?? new List<Article>();
             existing.Add(article);
-            await SetArticlesByDateAsync(date, existing);
+            TimeSpan expiration;
+            if (ttl.HasValue)
+            {
+                expiration = ttl.Value;
+            }
+            else
+            {
+                // Default: expire 15 days after PublishedAt to cover the rolling window
+                expiration = article.PublishedAt.Date.AddDays(15) - DateTime.UtcNow;
+                if (expiration <= TimeSpan.Zero)
+                    expiration = TimeSpan.FromSeconds(1); // expire immediately if old
+            }
+            await SetArticlesByDateAsync(date, existing, expiration);
         }
 
         public async Task<List<Article>> GetArticlesInRangeAsync(DateOnly start, DateOnly end)
