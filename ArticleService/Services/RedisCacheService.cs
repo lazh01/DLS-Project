@@ -1,5 +1,7 @@
 ﻿using StackExchange.Redis;
 using System.Text.Json;
+using Monitoring;
+
 namespace Articleservice.Services
 {
     public class RedisCacheService
@@ -15,8 +17,20 @@ namespace Articleservice.Services
         {
             string key = $"article:global:{id}";
             var value = await _cache.StringGetAsync(key);
-            if (value.IsNullOrEmpty) return null;
-            return JsonSerializer.Deserialize<Article>(value);
+            if (value.IsNullOrEmpty)
+            {
+                MonitorService.Log.Information(
+                    "Global Article CACHE MISS: Article {ArticleId}",
+                    id);
+                return null;
+            }
+            else
+            {
+                MonitorService.Log.Information(
+                    "Global Article CACHE HIT: Article {ArticleId}",
+                    id);
+                return JsonSerializer.Deserialize<Article>(value);
+            }
         }
 
         public async Task SetArticleByIdAsync(Article article, TimeSpan? ttl = null)

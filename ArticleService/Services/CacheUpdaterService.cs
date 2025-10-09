@@ -35,10 +35,8 @@ namespace Articleservice.Services
             }
             foreach (var article in newArticles)
             {
-                // Cache by ID
                 await _cacheService.SetArticleByIdAsync(article);
 
-                // Cache by PublishedAt date
                 await _cacheService.AppendArticleToDateAsync(article);
             }
             _lastCachedPublishedAt = newArticles.Max(a => a.PublishedAt).AddMilliseconds(1);

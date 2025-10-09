@@ -8,7 +8,7 @@ using System.Data.Common;
 using System.Threading.Tasks;
 using Messages.SharedModels;
 using Articleservice.Services;
-
+using Monitoring;
 
 namespace ArticleService.database
 {
@@ -121,7 +121,7 @@ namespace ArticleService.database
             cmd.CommandText = sql;
 
             int affected = await cmd.ExecuteNonQueryAsync();
-            Console.WriteLine($"Executed UPDATE: {sql}, rows affected: {affected}");
+
             return affected;
         }
 
@@ -132,17 +132,14 @@ namespace ArticleService.database
             cmd.Transaction = trans;
             cmd.CommandText = sql;
             var result = cmd.ExecuteNonQuery();
-            Console.WriteLine($"Executed command: {sql}, affected rows: {result}");
+
             trans.Commit();
         }
 
         public async Task<long?> InsertArticle(Article article)
         {
             var connection = await coordinator.GetConnectionByRegion(article.Continent);
-            /*Execute(connection, $"""
-            INSERT INTO Articles (Title, Content, Author, Continent)
-            VALUES ('{article.Title}', '{article.Content}', '{article.Author}', '{article.Continent}')
-            """);*/
+
             var result = await InsertSqlAsync(connection, $"""
             INSERT INTO Articles (Title, Content, Author, Continent)
             OUTPUT INSERTED.Id, INSERTED.Title, INSERTED.Author, INSERTED.PublishedAt, INSERTED.CreatedAt, INSERTED.Continent
@@ -164,9 +161,8 @@ namespace ArticleService.database
                 PublishedAt = row[3] is DateTime dt ? dt : DateTime.Parse(row[3]?.ToString() ?? DateTime.UtcNow.ToString()),
                 Continent = row[5]?.ToString() ?? ""
             };
-            Console.WriteLine("id: " + createdEvent.Id);
+
             await _bus.PubSub.PublishAsync(createdEvent);
-            Console.WriteLine($"Inserted article: {createdEvent.Id}");
             return createdEvent.Id;
         }
 
@@ -233,26 +229,32 @@ namespace ArticleService.database
         {
             if (request.Continent == "global")
             {
-                // Define the cached window (last 14 days)
+
                 var now = DateOnly.FromDateTime(DateTime.UtcNow);
                 var earliestCachedDate = now.AddDays(-14);
 
-                // Determine requested range
+
                 var start = request.StartDate ?? earliestCachedDate;
                 var end = request.EndDate ?? now;
 
-                // Only use cache if the requested range is entirely within cached window
                 if (start >= earliestCachedDate && end <= now)
                 {
-                    // Fetch from cache
+
                     var cached_articles = await _cacheService.GetArticlesInRangeAsync(start, end);
 
-                    // Apply MaxArticles if requested
+
                     if (request.MaxArticles.HasValue)
                         cached_articles = cached_articles.Take(request.MaxArticles.Value).ToList();
+                    MonitorService.Log.Information(
+                        "Global Article Fetch CACHE HIT: current data: {date_now}, start date: {start_date}, end date {end_date}",
+                        now, start, end);
                     Console.WriteLine($"Fetched {cached_articles.Count} articles from cache for continent {request.Continent}");
                     return cached_articles;
                 }
+
+                MonitorService.Log.Information(
+                        "Global Article Fetch CACHE MISS: current data: {date_now}, start date: {start_date}, end date {end_date}",
+                        now, start, end);
             }
 
             var connection = await coordinator.GetConnectionByRegion(request.Continent);
