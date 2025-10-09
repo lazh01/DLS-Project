@@ -1,14 +1,38 @@
-using Microsoft.Extensions.DependencyInjection;
 using Articleservice.Services;
-using ArticleService.database;
 using ArticleService;
+using ArticleService.database;
+using EasyNetQ;
+using Microsoft.Extensions.DependencyInjection;
+using Polly;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
-builder.Services.RegisterEasyNetQ(
-    "host=rabbitmq;username=guest;password=guest"
-    );
+
+//need to wait for rabbitmq
+builder.Services.AddSingleton<IBus>(sp =>
+{
+    IBus bus = null;
+
+    // Retry forever until RabbitMQ is available
+    var retryPolicy = Policy
+        .Handle<Exception>()
+        .WaitAndRetryForever(
+            _ => TimeSpan.FromSeconds(5),
+            (ex, _) => Console.WriteLine($"Waiting for RabbitMQ: {ex.Message}")
+        );
+
+    retryPolicy.Execute(() =>
+    {
+        bus = RabbitHutch.CreateBus("host=rabbitmq;username=guest;password=guest");
+
+        // Optional connectivity check
+        bus.Advanced.QueueDeclare("healthcheck-queue");
+    });
+
+    return bus;
+});
+
 var redisConnection = Environment.GetEnvironmentVariable("REDIS_CONNECTION") ?? "redis:6379";
 builder.Services.AddSingleton(new RedisCacheService(redisConnection));
 builder.Services.AddSingleton<Database>();
