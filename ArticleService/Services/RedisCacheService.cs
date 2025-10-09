@@ -45,10 +45,9 @@ namespace Articleservice.Services
             }
             else
             {
-                // Default: expire 15 days after PublishedAt to cover the rolling window
                 expiration = article.PublishedAt.Date.AddDays(15) - DateTime.UtcNow;
                 if (expiration <= TimeSpan.Zero)
-                    expiration = TimeSpan.FromSeconds(1); // expire immediately if old
+                    expiration = TimeSpan.FromSeconds(1);
             }
 
             await _cache.StringSetAsync(key, serialized, expiration);

@@ -1,10 +1,10 @@
-﻿using Azure.Core;
+﻿using ArticleService;
+using ArticleService.database;
+using Azure.Core;
 using EasyNetQ;
 using Microsoft.Extensions.Caching.Memory;
+using Polly;
 using SharedModels;
-using ArticleService.database;
-
-using ArticleService;
 
 namespace Articleservice.Services
 {
@@ -23,11 +23,18 @@ namespace Articleservice.Services
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
-            // Subscribe to ArticleCreatedEvent
-            await _bus.PubSub.SubscribeAsync<CreateArticleRequest>(
-                subscriptionId: "published_article_consumer",  // unique name for consumer group
-                onMessage: HandleMessage
-            );
+
+            var retry = Policy.Handle<Exception>()
+                    .WaitAndRetryForever(_ => TimeSpan.FromSeconds(5));
+
+            await retry.Execute(async () =>
+            {
+                await _bus.PubSub.SubscribeAsync<CreateArticleRequest>(
+                    "published_article_consumer",
+                    HandleMessage,
+                    cancellationToken: stoppingToken
+                );
+            });
 
             await Task.Delay(Timeout.Infinite, stoppingToken);
         }
