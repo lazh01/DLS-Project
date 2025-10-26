@@ -1,0 +1,37 @@
+name: Build and Publish DraftService
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'DraftService/**'
+      - '.github/workflows/draft.yml'
+
+permissions:
+  contents: read
+  packages: write
+
+env:
+  REGISTRY: ghcr.io
+  SERVICE_NAME: draftservice
+  IMAGE_VERSION: ${{ github.run_number }}
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Log in to GitHub Container Registry
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ${{ env.REGISTRY }} -u ${{ github.actor }} --password-stdin
+
+      - name: Build and push Docker image
+        run: |
+          docker build -t ${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ env.SERVICE_NAME }}:${{ env.IMAGE_VERSION }} \
+                       -t ${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ env.SERVICE_NAME }}:latest \
+                       -f ./DraftService/Dockerfile .
+          docker push ${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ env.SERVICE_NAME }}:${{ env.IMAGE_VERSION }}
+          docker push ${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ env.SERVICE_NAME }}:latest
