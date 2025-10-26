@@ -32,6 +32,6 @@ jobs:
         run: |
           docker build -t ${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ env.SERVICE_NAME }}:${{ env.IMAGE_VERSION }} \
                        -t ${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ env.SERVICE_NAME }}:latest \
-                       -f ./ProfanityService/Dockerfile .
+                       ./ProfanityService
           docker push ${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ env.SERVICE_NAME }}:${{ env.IMAGE_VERSION }}
           docker push ${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ env.SERVICE_NAME }}:latest
