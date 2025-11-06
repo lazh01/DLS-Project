@@ -5,9 +5,11 @@ namespace NewsletterService.Services
     public class ArticleCreatedConsumer : BackgroundService
     {
         private readonly IBus _bus;
-        public ArticleCreatedConsumer(IBus bus)
+        private readonly SubscriberApiClient _subscriberApi;
+        public ArticleCreatedConsumer(IBus bus, SubscriberApiClient subscriberApi)
         {
             _bus = bus;
+            _subscriberApi = subscriberApi;
         }
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -21,10 +23,10 @@ namespace NewsletterService.Services
 
         public async Task ArticleCreatedHandler(ArticleCreatedEvent message)
         {
-            // Simulate some publishing work
-            Console.WriteLine(message.ToString());
-            Console.WriteLine("NewsletterService received ArticleCreatedEvent");
-            await Task.CompletedTask;
+            var subscribers = await _subscriberApi.GetAllSubscribersAsync();
+            var activeSubscribers = subscribers.Where(s => s.IsSubscribed).ToList();
+
+            Console.WriteLine($"Sending article '{message.Title}' to {activeSubscribers.Count} subscribers.");
         }
     }
 }

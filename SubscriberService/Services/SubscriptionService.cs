@@ -104,5 +104,11 @@ namespace SubscriberService.Services
 
             return existing != null && existing.IsSubscribed;
         }
+
+        public async Task<List<Subscriber>> GetAllSubscribersAsync()
+        {
+            EnsureFeatureEnabled();
+            return await _context.Subscribers.ToListAsync();
+        }
     }
 }

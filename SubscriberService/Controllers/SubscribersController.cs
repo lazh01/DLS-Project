@@ -72,5 +72,20 @@ namespace SubscriberService.Controllers
                 return StatusCode(503, ex.Message); // Service disabled
             }
         }
+
+        [HttpGet]
+        public async Task<IActionResult> GetAllSubscribers()
+        {
+            try
+            {
+                var subscribers = await _subscriberService.GetAllSubscribersAsync();
+                return Ok(subscribers);
+            }
+            catch (InvalidOperationException ex)
+            {
+                // Service disabled via FeatureHub
+                return StatusCode(503, ex.Message);
+            }
+        }
     }
 }
