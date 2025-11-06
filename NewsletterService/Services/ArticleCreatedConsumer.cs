@@ -1,14 +1,15 @@
-﻿using SharedModels;
-using EasyNetQ;
+﻿using EasyNetQ;
+using NewsletterService.Wrappers;
+using SharedModels;
 namespace NewsletterService.Services
 {
     public class ArticleCreatedConsumer : BackgroundService
     {
         private readonly IBus _bus;
         private readonly SubscriberApiClient _subscriberApi;
-        public ArticleCreatedConsumer(IBus bus, SubscriberApiClient subscriberApi)
+        public ArticleCreatedConsumer(ArticleBus busWrapper, SubscriberApiClient subscriberApi)
         {
-            _bus = bus;
+            _bus = busWrapper.Bus;
             _subscriberApi = subscriberApi;
         }
 

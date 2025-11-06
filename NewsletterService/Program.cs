@@ -1,7 +1,9 @@
 using EasyNetQ;
+using NewsletterService.Interfaces;
+using NewsletterService.Services;
+using NewsletterService.Wrappers;
 using Polly;
 using Polly.Extensions.Http;
-using NewsletterService.Services;
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddHttpClient<SubscriberApiClient>(client =>
@@ -36,13 +38,16 @@ builder.Services.AddHttpClient<SubscriberApiClient>(client =>
             }
         )
 );
-// Add services to the container.
-//need to wait for rabbitmq
-builder.Services.AddSingleton<IBus>(sp =>
+
+// Subscriber queue
+builder.Services.AddSingleton<SubscriberBus>(_ =>
+    new SubscriberBus(RabbitHutch.CreateBus("host=subscriberqueue;username=guest;password=guest")));
+
+// Article queue
+builder.Services.AddSingleton<ArticleBus>(_ =>
 {
     IBus bus = null;
 
-    // Retry forever until RabbitMQ is available
     var retryPolicy = Policy
         .Handle<Exception>()
         .WaitAndRetryForever(
@@ -53,14 +58,20 @@ builder.Services.AddSingleton<IBus>(sp =>
     retryPolicy.Execute(() =>
     {
         bus = RabbitHutch.CreateBus("host=rabbitmq;username=guest;password=guest");
-
-        // Optional connectivity check
         bus.Advanced.QueueDeclare("healthcheck-queue");
     });
 
-    return bus;
+    return new ArticleBus(bus);
 });
-builder.Services.AddHostedService<ArticleCreatedConsumer>();
+
+// Hosted services
+// Register the hosted services manually with the wrappers
+builder.Services.AddSingleton<IHostedService>(sp =>
+    new SubscriberEventConsumer(sp.GetRequiredService<SubscriberBus>()));
+
+builder.Services.AddSingleton<IHostedService>(sp =>
+    new ArticleCreatedConsumer(sp.GetRequiredService<ArticleBus>(), sp.GetRequiredService<SubscriberApiClient>()));
+
 builder.Services.AddScoped<FetchArticlesService>();
 builder.Services.AddControllers();
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
