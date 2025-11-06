@@ -324,6 +324,62 @@ services:
     volumes:
       - loki_data:/loki
 
+
+  subscriberservice:
+    build:
+      context: .
+      dockerfile: ./SubscriberService/Dockerfile
+    ports:
+      - "8043:80"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_URLS=http://0.0.0.0:80
+      - ConnectionStrings__DefaultConnection=Server=subscriberdb,1433;Database=SubscriberDb;User Id=sa;Password=SuperSecret7!;TrustServerCertificate=True;
+      - FEATUREHUB_URL=http://featurehub:8085
+      - FEATUREHUB_APIKEY=0aa4ae40-6411-424b-9ce1-24e52535710e/wFzLkBtsLsItEKUU9Rgv2QoZqQCGuX*K88LU6vetHsDDkOJIB9U
+    depends_on:
+      - subscriberdb
+
+  subscriberdb:
+    image: mcr.microsoft.com/azure-sql-edge:latest
+    healthcheck:
+          test: ["CMD-SHELL", "/opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P SuperSecret7! -Q 'SELECT 1' || exit 1"]
+          interval: 10s
+          timeout: 5s
+          retries: 5
+          start_period: 30s
+    environment:
+      MSSQL_SA_PASSWORD: "SuperSecret7!"
+      ACCEPT_EULA: "Y"
+    volumes:
+      - mssql-subscribers:/var/opt/mssql
+
+  featurehub:
+    image: featurehub/party-server:latest
+    restart: always
+    volumes:
+      - featurehub-h2-data:/db
+    ports:
+      - 8085:8085
+
+
+  subscriberqueue:
+    image: rabbitmq:3-management-alpine
+    container_name: subscriberqueue
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    ports:
+    - "5673:5672"       # internal AMQP port
+    - "15673:15672"     # management UI
+    healthcheck:
+        test: ["CMD", "rabbitmq-diagnostics", "check_port_connectivity"]
+        interval: 10s
+        timeout: 5s
+        retries: 5
+    volumes:
+        - subscriberqueue-data:/var/lib/rabbitmq
+
 volumes:
   mssql-africa-articles:
   mssql-asia-articles:
@@ -337,6 +393,9 @@ volumes:
   mssql-profanities:
   mssql-comments:
   mssql-drafts:
+  mssql-subscribers:
+  featurehub-h2-data:
+  subscriberqueue-data:
   rps_seq_data:
   zipkin_data:
   grafana_data:  
