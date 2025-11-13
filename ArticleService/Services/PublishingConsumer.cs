@@ -16,12 +16,14 @@ namespace Articleservice.Services
         private readonly IBus _bus;
         private readonly IMemoryCache _cache;
         private readonly Database _database;
+        private readonly RedisCacheService _redisCache;
 
-        public PublishingConsumer(IBus bus, IMemoryCache cache, Database database)
+        public PublishingConsumer(IBus bus, IMemoryCache cache, Database database, RedisCacheService redisCache)
         {
             _bus = bus;
             _cache = cache;
             _database = database;
+            _redisCache = redisCache;
         }
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -65,16 +67,16 @@ namespace Articleservice.Services
 
             try
             {
-                // Optionally use cache to prevent duplicate processing
-                /*
-                if (_cache.TryGetValue(key, out _))
+                var firstTime = await _redisCache.TryAddArticleKeyAsync(message, TimeSpan.FromMinutes(5));
+                if (!firstTime)
                 {
-                    MonitorService.Log.Information("Duplicate message detected for key: {Key}. Skipping processing.", key);
+                    MonitorService.Log.Information(
+                        "Duplicate message detected for '{Title}' by '{Author}', skipping processing.",
+                        message.Title,
+                        message.Author
+                    );
                     return;
                 }
-
-                _cache.Set(key, true, TimeSpan.FromSeconds(30));
-                */
 
                 MonitorService.Log.Information(
                     "Received published article message: Title='{Title}', Author='{Author}', Continent='{Continent}'",

@@ -19,7 +19,7 @@ public static class MonitorService
 
     static MonitorService()
     {
-
+        var instanceId = Environment.MachineName;
         TracerProvider = Sdk.CreateTracerProviderBuilder()
             .AddConsoleExporter()
             .AddZipkinExporter(config =>
@@ -27,7 +27,12 @@ public static class MonitorService
                 config.Endpoint = new Uri(Environment.GetEnvironmentVariable("ZIPKIN_URL") ?? "http://localhost:9411/api/v2/spans");
             })
             .AddSource(ActivitySource.Name)
-            .SetResourceBuilder(ResourceBuilder.CreateDefault().AddService(ServiceName))
+            .SetResourceBuilder(ResourceBuilder.CreateDefault()
+                .AddService(ServiceName)
+                .AddAttributes(new Dictionary<string, object>
+                    {
+                        ["instance.id"] = instanceId
+                    }))
             .SetSampler(new AlwaysOnSampler())
             .Build();
 
@@ -35,6 +40,7 @@ public static class MonitorService
         Serilog.Log.Logger = new LoggerConfiguration()
             .MinimumLevel.Verbose()
             .Enrich.FromLogContext()
+            .Enrich.WithProperty("InstanceId", Environment.MachineName)
             .Enrich.WithProperty("Service", ServiceName)
             .WriteTo.Seq(Environment.GetEnvironmentVariable("SEQ_URL") ?? "http://localhost:5341")
             .WriteTo.GrafanaLoki(Environment.GetEnvironmentVariable("LOKI_URL") ?? "http://localhost:3100",

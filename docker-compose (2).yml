@@ -13,7 +13,9 @@ services:
     - rabbitmq-data:/var/lib/rabbitmq
   
   publisherservice:
-    image: ghcr.io/lazh01/publisherservice:latest
+    build:
+      context: .
+      dockerfile: ./PublisherService/Dockerfile
     ports:
       - "8013:80"
     environment:
@@ -26,7 +28,9 @@ services:
       - rabbitmq
 
   articleservice:
-    image: ghcr.io/lazh01/articleservice:latest
+    build:
+      context: .
+      dockerfile: ./ArticleService/dockerfile
     ports:
       - "8023:80"
     environment:
@@ -48,7 +52,6 @@ services:
       - articles-global-db
       - redis
     deploy:
-      replicas: 3
       restart_policy:
         condition: on-failure
 
@@ -169,7 +172,8 @@ services:
       - mssql-global-articles:/var/opt/mssql
   
   commentservice:
-    image: ghcr.io/lazh01/commentservice:latest
+    build:
+      context: ./CommentService
     ports:
       - "6002:80"
     environment:
@@ -197,7 +201,8 @@ services:
       - mssql-comments:/var/opt/mssql
 
   profanityservice:
-    image: ghcr.io/lazh01/profanityservice:latest
+    build:
+      context: ./ProfanityService
     ports:
       - "6001:80"
     environment:
@@ -227,7 +232,9 @@ services:
     restart: unless-stopped
 
   newsletterservice:
-    image: ghcr.io/lazh01/newsletterservice:latest
+    build:
+      context: .
+      dockerfile: ./NewsletterService/Dockerfile
     ports:
       - "8033:80"
     environment:
@@ -241,7 +248,9 @@ services:
       - subscriberqueue
 
   draftservice:
-    image: ghcr.io/lazh01/draftservice:latest
+    build:
+      context: .
+      dockerfile: DraftService/Dockerfile
     ports:
       - "6003:80"
     environment:
@@ -318,7 +327,9 @@ services:
 
 
   subscriberservice:
-    image: ghcr.io/lazh01/subscriberservice:latest
+    build:
+      context: .
+      dockerfile: ./SubscriberService/Dockerfile
     ports:
       - "8043:80"
     environment:

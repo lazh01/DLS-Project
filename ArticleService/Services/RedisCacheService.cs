@@ -1,7 +1,7 @@
 ﻿using StackExchange.Redis;
 using System.Text.Json;
 using Monitoring;
-
+using SharedModels;
 namespace Articleservice.Services
 {
     public class RedisCacheService
@@ -97,6 +97,16 @@ namespace Articleservice.Services
                 if (articles != null) results.AddRange(articles);
             }
             return results;
+        }
+
+        public async Task<bool> TryAddArticleKeyAsync(CreateArticleRequest message, TimeSpan? ttl = null)
+        {
+            string key = $"article:dedup:{message.Title}:{message.Author}";
+            TimeSpan expiration = ttl ?? TimeSpan.FromMinutes(5);
+
+            // SETNX equivalent: only set if not exists
+            bool added = await _cache.StringSetAsync(key, "1", expiration, When.NotExists);
+            return added; // true = first time, false = duplicate
         }
     }
 }
