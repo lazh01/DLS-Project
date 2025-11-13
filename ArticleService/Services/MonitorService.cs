@@ -30,9 +30,11 @@ public static class MonitorService
             .SetResourceBuilder(ResourceBuilder.CreateDefault()
                 .AddService(ServiceName)
                 .AddAttributes(new Dictionary<string, object>
-                    {
-                        ["instance.id"] = instanceId
-                    }))
+                {
+                    ["host.name"] = Environment.MachineName, // container or host name
+                    ["container.id"] = Environment.GetEnvironmentVariable("HOSTNAME") ?? "unknown",
+                })
+                )
             .SetSampler(new AlwaysOnSampler())
             .Build();
 
