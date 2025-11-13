@@ -14,5 +14,8 @@ namespace SharedModels
         public string Author { get; set; } = null!;
         public DateTime PublishedAt { get; set; } = DateTime.UtcNow;
         public string Continent { get; set; } = null!;
+
+        public string? TraceParent { get; set; }
+        public string? TraceState { get; set; }
     }
 }

@@ -1,6 +1,8 @@
 ﻿using EasyNetQ;
 using NewsletterService.Wrappers;
 using SharedModels;
+using Monitoring;
+using System.Diagnostics;
 namespace NewsletterService.Services
 {
     public class ArticleCreatedConsumer : BackgroundService
@@ -24,10 +26,37 @@ namespace NewsletterService.Services
 
         public async Task ArticleCreatedHandler(ArticleCreatedEvent message)
         {
-            var subscribers = await _subscriberApi.GetAllSubscribersAsync();
-            var activeSubscribers = subscribers.Where(s => s.IsSubscribed).ToList();
 
-            Console.WriteLine($"Sending article '{message.Title}' to {activeSubscribers.Count} subscribers.");
+            ActivityContext parentContext = default;
+            if (!string.IsNullOrEmpty(message.TraceParent))
+            {
+                ActivityContext.TryParse(message.TraceParent, message.TraceState, out parentContext);
+            }
+
+            using (var activity = MonitorService.ActivitySource.StartActivity(
+                "ArticleCreatedHandler",
+                ActivityKind.Consumer,
+                parentContext
+            ))
+            {
+                try
+                {
+                    var subscribers = await _subscriberApi.GetAllSubscribersAsync();
+                    var activeSubscribers = subscribers.Where(s => s.IsSubscribed).ToList();
+
+                    MonitorService.Log.Information(
+                        "Sending article '{Title}' to {Count} active subscribers.",
+                        message.Title, activeSubscribers.Count
+                    );
+
+                    // Simulate delivery or further processing
+                }
+                catch (Exception ex)
+                {
+                    MonitorService.Log.Error(ex, "Error processing ArticleCreatedEvent for {Title}", message.Title);
+                    throw;
+                }
+            }
         }
     }
 }

@@ -2,9 +2,12 @@
 using ArticleService.database;
 using Azure.Core;
 using EasyNetQ;
+using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Caching.Memory;
+using Monitoring;
 using Polly;
 using SharedModels;
+using System.Diagnostics;
 
 namespace Articleservice.Services
 {
@@ -41,30 +44,86 @@ namespace Articleservice.Services
 
         private async Task HandleMessage(CreateArticleRequest message)
         {
-            /*var key = $"{message.Title}-{message.Author}";
-
-            // Try to add to cache. If it already exists, skip processing
-            if (_cache.TryGetValue(key, out _))
-                return Task.CompletedTask;
-
-            // Add to cache with expiration (e.g., 5 minutes)
-            _cache.Set(key, true, TimeSpan.FromSeconds(30));
-            */
-            // Process the message (e.g., log it, store it, etc.)
-
-            var article = new Article
+            if (message == null)
             {
-                Title = message.Title,
-                Content = message.Content,
-                Author = message.Author,
-                Continent = message.Continent
-            };
-            Console.WriteLine("Inserting article into database...");
-            var newId = await _database.InsertArticle(article);
-            Console.WriteLine($"Inserted article with ID {newId}.");
-            Console.WriteLine($"Received article: Title={message.Title}, Author={message.Author}, Continent={message.Continent}");
-            
-            return;
+                MonitorService.Log.Warning("Received null message in HandleMessage");
+                return;
+            }
+
+            ActivityContext parentContext = default;
+
+            if (!string.IsNullOrEmpty(message.TraceParent))
+            {
+                ActivityContext.TryParse(message.TraceParent, message.TraceState, out parentContext);
+            }
+
+            using var activity = MonitorService.ActivitySource.StartActivity(
+                "HandleMessage",
+                ActivityKind.Consumer,
+                parentContext
+            );
+
+            try
+            {
+                // Optionally use cache to prevent duplicate processing
+                /*
+                if (_cache.TryGetValue(key, out _))
+                {
+                    MonitorService.Log.Information("Duplicate message detected for key: {Key}. Skipping processing.", key);
+                    return;
+                }
+
+                _cache.Set(key, true, TimeSpan.FromSeconds(30));
+                */
+
+                MonitorService.Log.Information(
+                    "Received published article message: Title='{Title}', Author='{Author}', Continent='{Continent}'",
+                    message.Title,
+                    message.Author,
+                    message.Continent
+                );
+
+                var article = new Article
+                {
+                    Title = message.Title,
+                    Content = message.Content,
+                    Author = message.Author,
+                    Continent = message.Continent
+                };
+
+                MonitorService.Log.Debug("Inserting article '{Title}' by '{Author}' into database.", article.Title, article.Author);
+
+                long? newId = await _database.InsertArticle(article);
+
+                if (newId.HasValue)
+                {
+                    MonitorService.Log.Information("Successfully inserted article with ID {Id}.", newId);
+                }
+                else
+                {
+                    MonitorService.Log.Warning("Article insertion returned null ID for '{Title}' by '{Author}'.", article.Title, article.Author);
+                }
+            }
+            catch (SqlException ex)
+            {
+                MonitorService.Log.Error(ex, "SQL error while handling message for '{Title}' by '{Author}'", message.Title, message.Author);
+                throw; // Rethrow to allow retry or DLQ (Dead Letter Queue) handling
+            }
+            catch (TimeoutException ex)
+            {
+                MonitorService.Log.Error(ex, "Timeout while handling message for '{Title}' by '{Author}'", message.Title, message.Author);
+                throw;
+            }
+            catch (Exception ex)
+            {
+                MonitorService.Log.Error(ex, "Unexpected error while handling message for '{Title}' by '{Author}'", message.Title, message.Author);
+                throw;
+            }
+            finally
+            {
+                MonitorService.Log.Debug("Finished processing message for '{Title}' by '{Author}'", message.Title, message.Author);
+                activity?.Stop();
+            }
         }
     }
 }

@@ -1,14 +1,15 @@
 
+using Articleservice.Services;
 using Azure.Core;
 using EasyNetQ;
+using Messages.SharedModels;
 using Microsoft.Data.SqlClient;
+using Monitoring;
 using SharedModels;
 using System.Data;
 using System.Data.Common;
+using System.Diagnostics;
 using System.Threading.Tasks;
-using Messages.SharedModels;
-using Articleservice.Services;
-using Monitoring;
 
 namespace ArticleService.database
 {
@@ -162,7 +163,28 @@ namespace ArticleService.database
                 Continent = row[5]?.ToString() ?? ""
             };
 
+
+            var currentActivity = Activity.Current;
+            using var publishActivity = MonitorService.ActivitySource.StartActivity(
+                "PublishArticleCreatedEvent",
+                ActivityKind.Producer,
+                currentActivity?.Context ?? default
+            );
+
+            if (publishActivity != null)
+            {
+                createdEvent.TraceParent = publishActivity.Id;
+                createdEvent.TraceState = publishActivity.TraceStateString;
+            }
+
+            MonitorService.Log.Information(
+                "Publishing ArticleCreatedEvent for Article ID {Id}, Title='{Title}', Author='{Author}'",
+                createdEvent.Id, createdEvent.Title, createdEvent.Author
+            );
+
             await _bus.PubSub.PublishAsync(createdEvent);
+
+            MonitorService.Log.Information("Published ArticleCreatedEvent for ID {Id}", createdEvent.Id);
             return createdEvent.Id;
         }
 
