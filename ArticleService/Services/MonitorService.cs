@@ -49,5 +49,19 @@ public static class MonitorService
                 labels: new[] { new LokiLabel { Key = "service_name", Value = ServiceName } }
             )
             .CreateLogger();
+
+        ActivityListener listener = new ActivityListener
+        {
+            ShouldListenTo = s => true, // or filter by your ActivitySource name
+            Sample = (ref ActivityCreationOptions<ActivityContext> _) => ActivitySamplingResult.AllData,
+            ActivityStarted = activity =>
+            {
+                activity.SetTag("host.name", Environment.MachineName);
+                activity.SetTag("container.id", Environment.GetEnvironmentVariable("HOSTNAME") ?? "unknown");
+            },
+            ActivityStopped = activity => { }
+        };
+
+        ActivitySource.AddActivityListener(listener);
     }
 }
